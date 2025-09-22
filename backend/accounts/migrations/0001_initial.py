@@ -13,6 +13,10 @@ class Migration(migrations.Migration):
         ('auth', '0012_alter_user_first_name_max_length'),
     ]
 
+    run_before = [
+        ('token_blacklist', '0001_initial'),
+    ]
+
     operations = [
         migrations.CreateModel(
             name='Empresa',
