@@ -126,3 +126,16 @@ As User Stories são descrições breves e objetivas de funcionalidades do siste
 
 [📄 Relatório](./relatorios/iteracao_3.md)
 
+---
+
+### Loading Test Data
+
+To populate the database with sample data for testing purposes, run the following script from the root of the project:
+
+```bash
+./backend/scripts/load_fixtures.sh
+```
+
+This will create a test user with the following credentials:
+- **Email:** user@example.com
+- **Password:** password
