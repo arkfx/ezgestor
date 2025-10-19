@@ -116,6 +116,73 @@ class FinancialStatsView(views.APIView):
         return Response(data)
 
 
+from django.db.models.functions import TruncMonth, TruncDay
+from django.utils import timezone
+from datetime import timedelta
+
+class CashFlowChartView(views.APIView):
+    """
+    View para fornecer dados agregados para o gráfico de fluxo de caixa.
+    Agrega entradas e saídas por um período (diário, semanal, mensal).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        empresa = request.user.empresa
+
+        # Por padrão, pega os últimos 30 dias
+        period = request.query_params.get('period', 'monthly') # monthly, daily
+
+        # Define a data de início e fim
+        end_date = timezone.now()
+        if period == 'daily':
+            start_date = end_date - timedelta(days=30)
+            trunc_func = TruncDay
+            date_format = '%Y-%m-%d'
+        else: # Mensal (padrão)
+            start_date = end_date - timedelta(days=365)
+            trunc_func = TruncMonth
+            date_format = '%Y-%m'
+
+
+        # Filtra os lançamentos da empresa no período
+        queryset = LancamentoFinanceiro.objects.filter(
+            empresa=empresa,
+            data_lancamento__gte=start_date,
+            data_lancamento__lte=end_date
+        )
+
+        # Agrega as entradas
+        inflows = queryset.filter(tipo='entrada').annotate(
+            period=trunc_func('data_lancamento')
+        ).values('period').annotate(
+            total=Sum('valor')
+        ).order_by('period')
+
+        # Agrega as saídas
+        outflows = queryset.filter(tipo='saida').annotate(
+            period=trunc_func('data_lancamento')
+        ).values('period').annotate(
+            total=Sum('valor')
+        ).order_by('period')
+
+        # Formata os dados para o gráfico
+        inflow_data = {item['period'].strftime(date_format): item['total'] for item in inflows}
+        outflow_data = {item['period'].strftime(date_format): item['total'] for item in outflows}
+
+        # Cria um set de todas as chaves (períodos)
+        all_periods = sorted(list(set(inflow_data.keys()) | set(outflow_data.keys())))
+
+        # Monta a resposta final
+        chart_data = {
+            'labels': all_periods,
+            'inflows': [inflow_data.get(p, 0) for p in all_periods],
+            'outflows': [outflow_data.get(p, 0) for p in all_periods],
+        }
+
+        return Response(chart_data)
+
+
 class DashboardStatsView(views.APIView):
     """
     Endpoint de KPIs do Dashboard (mensal):

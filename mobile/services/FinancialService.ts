@@ -65,3 +65,14 @@ export const updateLancamento = async (id: number, data: LancamentoFinanceiroDat
 export const deleteLancamento = async (id: number): Promise<void> => {
   await api.delete(`/financeiro/lancamentos/${id}/`);
 };
+
+export interface CashFlowChartData {
+  labels: string[];
+  inflows: number[];
+  outflows: number[];
+}
+
+export const getCashFlowChartData = async (period: 'monthly' | 'daily' = 'monthly'): Promise<CashFlowChartData> => {
+  const response = await api.get('/financeiro/cashflow-chart/', { params: { period } });
+  return response.data;
+};
